@@ -10,6 +10,7 @@
 <style>
   :root { color-scheme: light; color-scheme: only light; --bg:#dfe4e8; --bg2:#c9d1d8; --btn-bg:#2b3a47; --btn-ink:#f4f5f6; --base:none; --tgt:none; }
   * { box-sizing: border-box; }
+  html { -moz-text-size-adjust: none; text-size-adjust: none; }
   html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; -webkit-tap-highlight-color: transparent;
                -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
   body { background: var(--bg); font-family: "Caveat", "Segoe Script", cursive; }
@@ -457,7 +458,7 @@
   /* ---------- background song ----------
      Drop a track in one of two ways (see add_song.py): embed it in this file, or put a file named like SONG.file next to it.
      If neither exists or it fails to play, the built-in synthesised piano below takes over. */
-  var SONG = { file: 'song.mp3', volume: .3, fade: 4 };          // volume 0-1, fade-in seconds
+  var SONG = { file: 'song.mp3', volume: .6, fade: 4 };          // volume 0-1, fade-in seconds
   var song = document.getElementById('song'), songOn = false, songFade = 0, songBad = false, songMode = '', songBuf = null, songStat = 'idle', songWant = false;
   function songTo(v, ms, done) {
     clearInterval(songFade);
@@ -642,7 +643,7 @@
     var f = Math.min((w - 24) / 680, h * .88 / 900), V0 = Math.min(w * .94 / 653, (h - 104) / 837);
     var wide = (w - 653 * V0) / 2 >= 236;                          // wide: links go beside the card; otherwise they get a row under it
     body.classList.toggle('wide', wide);
-    var T = wide ? 20 : 64, B = wide ? 86 : 84 + maps.offsetHeight + 12;   // top margin (clear of the sound button) / room for the button + links under the card
+    var T = wide ? 20 : 64, B = wide ? 86 : (parseFloat(getComputedStyle(maps).bottom) || 80) + maps.offsetHeight + 18;   // top margin (clear of the sound button) / room for the button + links under the card
     var V = Math.max(.1, Math.min(w * .94 / 653, (h - B - T) / 837)), off = T + (h - B - T) / 2 - h / 2 + 36 * V; curV = V;   // card centred in the free area (36 = jacket lift)
     var st = document.documentElement.style;
     stage.style.transition = 'none';
@@ -791,6 +792,7 @@
   window.addEventListener('orientationchange', function () { setTimeout(queueLayout, 350); });
   if (window.visualViewport) window.visualViewport.addEventListener('resize', queueLayout);
   layout();
+  if (window.ResizeObserver) new ResizeObserver(function () { lw = 0; queueLayout(); }).observe(maps);   // links changed size (font loaded, text wrapped differently, other browser): re-measure
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { lw = 0; queueLayout(); });
 
   setTimeout(function () { body.classList.remove('intro'); }, 1400);   // the entrance fade plays once, never again
