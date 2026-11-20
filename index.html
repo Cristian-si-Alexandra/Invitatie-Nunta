@@ -270,28 +270,62 @@
     var c = el.getAttribute('class'); if (c) cv.className = c + (cv.className ? ' ' + cv.className : '');
     el.parentNode.replaceChild(cv, el);
   }
-  function svgImg(svg, w, h, cb) {
-    var c = svg.cloneNode(true); c.setAttribute('width', w); c.setAttribute('height', h); c.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    var im = new Image(); im.onload = function () { cb(im); }; im.onerror = function () { cb(null); };
-    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(c));
-  }
   function loaded(img, cb) { if (img.complete && img.naturalWidth) cb(); else img.addEventListener('load', cb, { once: true }); }
   function solid(color) { var c = d.createElement('canvas'); c.width = c.height = 1; var x = c.getContext('2d'); x.fillStyle = color; x.fillRect(0, 0, 1, 1); c.setAttribute('aria-hidden', 'true'); return c; }
 
-  /* jacket halves */
+  /* jacket halves and heart: drawn straight onto the canvas (no SVG picture to load, nothing the browser can recolour) */
+  var STOPS_J = [[0, '#768fa4'], [.5, '#688196'], [1, '#5b7387']], STOPS_L = [[0, '#8098ad'], [1, '#6c859a']];
+  function poly(x, pts) { x.beginPath(); pts.forEach(function (p, i) { if (i) x.lineTo(p[0], p[1]); else x.moveTo(p[0], p[1]); }); x.closePath(); }
+  function shape(x, pts, g2, stops, edge, edgeW, shadow) {
+    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    pts.forEach(function (p) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); });
+    var bw = x1 - x0, bh = y1 - y0;
+    x.save();                                                    // fill: gradient measured on the shape's own box, like the original artwork
+    if (shadow) { x.shadowColor = 'rgba(20,30,38,.38)'; x.shadowBlur = 9 * R; x.shadowOffsetX = R; x.shadowOffsetY = 4 * R; }
+    x.translate(x0, y0); x.scale(bw, bh);
+    var g = x.createLinearGradient(0, 0, g2[0], g2[1]); stops.forEach(function (s) { g.addColorStop(s[0], s[1]); });
+    x.fillStyle = g; poly(x, pts.map(function (p) { return [(p[0] - x0) / bw, (p[1] - y0) / bh]; })); x.fill();
+    x.restore();
+    if (edge) {                                                  // thin edge line
+      x.save(); x.lineWidth = edgeW; x.lineJoin = 'round';
+      if (typeof edge === 'string') x.strokeStyle = edge;
+      else { var eg = x.createLinearGradient(x0, y0, x1, y1); stops.forEach(function (s) { eg.addColorStop(s[0], s[1]); }); x.strokeStyle = eg; }
+      poly(x, pts); x.stroke(); x.restore();
+    }
+  }
+  function half(x, side) {
+    x.save(); x.translate(40, 0); x.translate(300, 0); x.scale(1.16964, 1); x.translate(-300, 0);      // same widening as before
+    if (side === 'left') {
+      shape(x, [[20, 30], [185, 30], [298, 585], [312, 640], [312, 870], [20, 870]], [1, 1], STOPS_J, true, 1.2);
+      shape(x, [[122, 30], [185, 30], [202, 102], [152, 135], [104, 102]], [1, .8], STOPS_L, '#556b7d', .8, true);
+      shape(x, [[204, 114], [295, 580], [278, 645], [68, 118], [145, 144]], [1, .8], STOPS_L, '#556b7d', .8, true);
+    } else {
+      shape(x, [[580, 30], [415, 30], [302, 585], [298, 640], [298, 870], [580, 870]], [1, 1], STOPS_J, true, 1.2);
+      x.strokeStyle = '#475b6b'; x.lineWidth = 1.2; x.beginPath(); x.moveTo(298, 640); x.lineTo(298, 870); x.stroke();
+      shape(x, [[478, 30], [415, 30], [398, 102], [448, 135], [496, 102]], [1, .8], STOPS_L, '#556b7d', .8, true);
+      shape(x, [[396, 114], [305, 580], [322, 645], [532, 118], [455, 144]], [1, .8], STOPS_L, '#556b7d', .8, true);
+    }
+    x.restore();
+  }
   ['left', 'right'].forEach(function (id) {
     var el = d.getElementById(id); if (!el) return;
-    svgImg(el, 680, 900, function (im) {
-      if (!im) return;
-      var cv = mk(680, 900); job(cv, 680, 900, function (x) { x.drawImage(im, 0, 0, 680, 900); }); swap(el, cv);
-    });
+    var cv = mk(680, 900); job(cv, 680, 900, function (x) { half(x, id); }); swap(el, cv);
   });
-  /* heart button */
   var hs = $('#heart svg');
-  if (hs) svgImg(hs, 120, 120, function (im) {
-    if (!im) return;
-    var cv = mk(120, 120, 'art'); job(cv, 120, 120, function (x) { x.drawImage(im, 0, 0, 120, 120); }); hs.parentNode.replaceChild(cv, hs);
-  });
+  if (hs) {
+    var HP = new Path2D('M 0,44 C -22,26 -48,2 -48,-20 C -48,-39 -33,-49 -18,-49 C -7,-49 0,-41 0,-34 C 0,-41 7,-49 18,-49 C 33,-49 48,-39 48,-20 C 48,2 22,26 0,44 Z');
+    var HI = new Path2D('M 0,36 C -17,21 -39,0 -39,-19 C -39,-33 -28,-41 -16,-41 C -7,-41 0,-34 0,-27 C 0,-34 7,-41 16,-41 C 28,-41 39,-33 39,-19 C 39,0 17,21 0,36 Z');
+    var hc = mk(120, 120, 'art');
+    job(hc, 120, 120, function (x) {
+      x.translate(60, 60);
+      x.save(); x.shadowColor = 'rgba(13,19,24,.45)'; x.shadowBlur = 8 * R; x.shadowOffsetX = R; x.shadowOffsetY = 5 * R; x.fillStyle = '#2c2927'; x.fill(HP); x.restore();
+      x.fillStyle = '#2c2927'; x.fill(HP); x.strokeStyle = '#181615'; x.lineWidth = 1.8; x.stroke(HP);
+      x.strokeStyle = '#857e77'; x.lineWidth = 1.4; x.setLineDash([4.5, 3.5]); x.stroke(HI); x.setLineDash([]);
+      x.fillStyle = '#12100f'; [-9, 9].forEach(function (cx) { x.beginPath(); x.arc(cx, -8, 3.2, 0, TAU); x.fill(); });
+      x.strokeStyle = '#5e5853'; x.lineWidth = 3; x.lineCap = 'round'; x.beginPath(); x.moveTo(-9, -8); x.lineTo(9, -8); x.stroke();
+    });
+    hs.parentNode.replaceChild(hc, hs);
+  }
   /* lining */
   var li = d.getElementById('lining');
   if (li) { var lc = mk(655, 840); job(lc, 655, 840, function (x) {
