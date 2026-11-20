@@ -4,12 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <title>Invitație</title>
-<meta name="theme-color" content="#dfe4e8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#151c23" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#dfe4e8">
+<meta name="color-scheme" content="only light">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <style>
-  :root { color-scheme: light; --bg:#dfe4e8; --bg2:#c9d1d8; --btn-bg:#2b3a47; --btn-ink:#f4f5f6; --base:none; --tgt:none; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; --bg:#151c23; --bg2:#0c1116; --btn-bg:#c5d0d9; --btn-ink:#151c23; } }
+  :root { color-scheme: light; color-scheme: only light; --bg:#dfe4e8; --bg2:#c9d1d8; --btn-bg:#2b3a47; --btn-ink:#f4f5f6; --base:none; --tgt:none; }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; -webkit-tap-highlight-color: transparent;
                -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
@@ -59,7 +58,7 @@
                background-image: radial-gradient(circle at 36% 36%, #aab3bb 1.7px, transparent 2.1px), radial-gradient(circle at 64% 36%, #aab3bb 1.7px, transparent 2.1px),
                                  radial-gradient(circle at 36% 64%, #aab3bb 1.7px, transparent 2.1px), radial-gradient(circle at 64% 64%, #aab3bb 1.7px, transparent 2.1px); }
 
-  .half { left: 0; top: 0; width: 680px; height: 900px; will-change: transform, opacity; transform: perspective(8000px) rotateY(0deg); transition: transform 1.3s cubic-bezier(.5,-.16,.2,1), filter 1.3s ease, opacity .5s ease, visibility 0s; }
+  .half { left: 0; top: 0; width: 680px; height: 900px; will-change: transform, opacity; transform: none; transition: transform 1.3s cubic-bezier(.5,-.16,.2,1), filter 1.3s ease, opacity .5s ease, visibility 0s; }
   #left { transform-origin: 12.5px 450px; }
   #right { transform-origin: 667.5px 450px; transition-delay: .06s, .06s, 0s, 0s; }
   body.open #left { transform: perspective(1200px) rotateY(-80deg); }
@@ -124,8 +123,6 @@
   /* background: soft spotlight, faint heart pattern, drifting golden bokeh */
   :root { --glow: rgba(255,255,255,.8); --vig: rgba(43,58,71,.2); --bk: 255,226,160; --bka: .6;
           --pat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cg fill='none' stroke='%232b3a47' stroke-opacity='.09' stroke-width='1.2'%3E%3Cpath d='M36 45c-5-4-9-7-9-11a4.5 4.5 0 0 1 9-1 4.5 4.5 0 0 1 9 1c0 4-4 7-9 11z'/%3E%3C/g%3E%3Ccircle cx='0' cy='0' r='1.4' fill='%232b3a47' fill-opacity='.1'/%3E%3C/svg%3E"); }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --glow: rgba(120,150,180,.26); --vig: rgba(0,0,0,.5); --bk: 247,223,166; --bka: .3;
-          --pat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cg fill='none' stroke='%23c5d0d9' stroke-opacity='.08' stroke-width='1.2'%3E%3Cpath d='M36 45c-5-4-9-7-9-11a4.5 4.5 0 0 1 9-1 4.5 4.5 0 0 1 9 1c0 4-4 7-9 11z'/%3E%3C/g%3E%3Ccircle cx='0' cy='0' r='1.4' fill='%23c5d0d9' fill-opacity='.09'/%3E%3C/svg%3E"); } }
   #bgfx { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
   #bgfx .pat { position: absolute; inset: 0; background-image: var(--pat); }
   #bgfx .glow { position: absolute; inset: 0; opacity: .6; transition: opacity 2.2s ease .8s;
@@ -250,7 +247,7 @@
     if (!AC) {
       try { var AX = window.AudioContext || window.webkitAudioContext; try { AC = new AX({ latencyHint: 'playback' }); } catch (e2) { AC = new AX(); } master = AC.createGain(); var comp = AC.createDynamicsCompressor(); comp.threshold.value = -14; comp.knee.value = 20; comp.ratio.value = 4; comp.attack.value = .01; comp.release.value = .25; master.connect(comp); comp.connect(AC.destination); } catch (e) {}
     }
-    if (AC && AC.state === 'suspended' && !muted) AC.resume();
+    if (AC && (AC.state === 'suspended' || AC.state === 'interrupted') && !muted) AC.resume();
     return AC;
   }
   function ding(f, vol, when) {
@@ -278,7 +275,7 @@
     return IR;
   }
   var warmed = false;
-  function warm() { if (warmed) return; warmed = true; if (audio()) { noiseBuf(); irBuf(); } }   // done before the tap finishes, not during the animation
+  function warm() { if (warmed) return; warmed = true; if (audio()) { noiseBuf(); } }   // done before the tap finishes, not during the animation
   function swish(dur, vol, f0, f1, when) {
     var ac = audio(); if (!ac) return;
     var t = ac.currentTime + (when || 0);
@@ -301,9 +298,14 @@
   ];
   var ARP = [0, 1, 2, 3, 2, 1, 2, 1], STEP = 0.45;
   function reverbBus() {
-    var ac = AC, conv = ac.createConvolver(), wet = ac.createGain();
-    conv.buffer = irBuf(); wet.gain.value = .55;
-    musicGain.connect(conv); conv.connect(wet); wet.connect(master);
+    var ac = AC, wet = ac.createGain(), bus = ac.createGain();
+    wet.gain.value = .45; bus.gain.value = .5; wet.connect(master); musicGain.connect(bus);
+    [.0297, .0371, .0411, .0437, .0613, .0797].forEach(function (t, i) {
+      var d = ac.createDelay(1), fb = ac.createGain(), lp = ac.createBiquadFilter(), out = ac.createGain(), pan = ac.createStereoPanner ? ac.createStereoPanner() : null;
+      d.delayTime.value = t; fb.gain.value = .74; lp.type = 'lowpass'; lp.frequency.value = 2600; out.gain.value = .5;
+      bus.connect(d); d.connect(lp); lp.connect(fb); fb.connect(d);
+      d.connect(out); if (pan) { pan.pan.value = i % 2 ? .6 : -.6; out.connect(pan); pan.connect(wet); } else out.connect(wet);
+    });
   }
   function tone(f, t, dur, vol, type, attack) {
     var ac = AC, o = ac.createOscillator(), g = ac.createGain();
