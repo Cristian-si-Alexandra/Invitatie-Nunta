@@ -164,6 +164,24 @@
     *, *::before, *::after { transition-duration: .01s !important; transition-delay: 0s !important; animation: none !important; }
     body.open #heart { opacity: 0; }
   }
+
+  /* ---- paint-immune art: drawn into <canvas>, which forced dark modes (Samsung Internet) do not invert ---- */
+  #dim, #bgfx .glow, #bgfx .pat, #lining, #bgfx i { background: none !important; }
+  #dim, #bgfx .glow { width: 100%; height: 100%; display: block; }
+  #bgfx .pat { display: block; }
+  .face { background: transparent !important; }
+  .back { border: 0 !important; }
+  .face .art { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+  #heart .art { display: block; width: 100%; height: 100%; pointer-events: none; animation: beat 2.4s ease-in-out infinite; }
+  body.open #heart .art, body.hh #heart .art { animation-play-state: paused; }
+  #heart:focus-visible { outline: 3px solid #f2c14e; outline-offset: -8px; border-radius: 50%; }
+  #zc { border: 0 !important; background: transparent !important; }
+  #zc img { position: absolute; left: .2297%; top: .1792%; width: 99.54%; height: 99.64%; object-fit: fill; }
+  #zc canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+  #zc::after { display: none !important; }
+  .zshine { opacity: 0; }
+  #zc.shine .zshine { animation: shine2 1.5s cubic-bezier(.4,0,.2,1) .2s both; }
+  #zsh { background: transparent !important; }
 </style>
 </head>
 <body class="intro">
@@ -232,6 +250,120 @@
   </svg>
 </button>
 
+<script>
+(function () {
+  'use strict';
+  var d = document, dpr = Math.min(window.devicePixelRatio || 1, 3), TAU = Math.PI * 2;
+  function $(q) { return d.querySelector(q); }
+  function scaleFor() {
+    var w = innerWidth, h = innerHeight, f = Math.min((w - 24) / 680, h * .88 / 900), V = Math.min(w * .94 / 653, (h - 104) / 837);
+    return Math.min(2.2, Math.max(1, Math.ceil(Math.max(f, V) * dpr * 4) / 4));
+  }
+  var R = scaleFor(), jobs = [];
+  function mk(w, h, cls) { var c = d.createElement('canvas'); c.width = Math.round(w * R); c.height = Math.round(h * R); if (cls) c.className = cls; c.setAttribute('aria-hidden', 'true'); return c; }
+  function job(cv, w, h, draw) {                       // a drawing that can be repeated at a new scale
+    var j = function () { cv.width = Math.round(w * R); cv.height = Math.round(h * R); var x = cv.getContext('2d'); x.setTransform(R, 0, 0, R, 0, 0); draw(x); };
+    jobs.push(j); j();
+  }
+  function swap(el, cv) {
+    if (el.id) cv.id = el.id;
+    var c = el.getAttribute('class'); if (c) cv.className = c + (cv.className ? ' ' + cv.className : '');
+    el.parentNode.replaceChild(cv, el);
+  }
+  function svgImg(svg, w, h, cb) {
+    var c = svg.cloneNode(true); c.setAttribute('width', w); c.setAttribute('height', h); c.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    var im = new Image(); im.onload = function () { cb(im); }; im.onerror = function () { cb(null); };
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(c));
+  }
+  function loaded(img, cb) { if (img.complete && img.naturalWidth) cb(); else img.addEventListener('load', cb, { once: true }); }
+  function solid(color) { var c = d.createElement('canvas'); c.width = c.height = 1; var x = c.getContext('2d'); x.fillStyle = color; x.fillRect(0, 0, 1, 1); c.setAttribute('aria-hidden', 'true'); return c; }
+
+  /* jacket halves */
+  ['left', 'right'].forEach(function (id) {
+    var el = d.getElementById(id); if (!el) return;
+    svgImg(el, 680, 900, function (im) {
+      if (!im) return;
+      var cv = mk(680, 900); job(cv, 680, 900, function (x) { x.drawImage(im, 0, 0, 680, 900); }); swap(el, cv);
+    });
+  });
+  /* heart button */
+  var hs = $('#heart svg');
+  if (hs) svgImg(hs, 120, 120, function (im) {
+    if (!im) return;
+    var cv = mk(120, 120, 'art'); job(cv, 120, 120, function (x) { x.drawImage(im, 0, 0, 120, 120); }); hs.parentNode.replaceChild(cv, hs);
+  });
+  /* lining */
+  var li = d.getElementById('lining');
+  if (li) { var lc = mk(655, 840); job(lc, 655, 840, function (x) {
+    var g = x.createLinearGradient(0, 0, 655, 0); g.addColorStop(0, '#1a232b'); g.addColorStop(.3, '#24303a'); g.addColorStop(.7, '#24303a'); g.addColorStop(1, '#1a232b');
+    x.fillStyle = g; x.fillRect(0, 0, 655, 840);
+  }); swap(li, lc); }
+
+  /* paper, shirt side: white, printed tie, placket, buttons */
+  var front = $('.front'), tie = $('.front .tie');
+  if (front && tie) loaded(tie, function () {
+    var cv = mk(653, 837, 'art');
+    job(cv, 653, 837, function (x) {
+      x.fillStyle = '#fff'; x.fillRect(0, 0, 653, 837);
+      x.drawImage(tie, 286, 0, 80, 400);
+      x.strokeStyle = '#dde2e6'; x.lineWidth = 1.6;
+      [306.8, 346.8].forEach(function (px) { x.beginPath(); x.moveTo(px, 408.5); x.lineTo(px, 837); x.stroke(); });
+      [435.5, 503.5, 571.5, 639.5, 707.5, 775.5].forEach(function (t) {
+        var cx = 326, cy = t + 13;
+        x.beginPath(); x.arc(cx, cy, 13, 0, TAU); x.fillStyle = '#fff'; x.fill();
+        x.lineWidth = 2.2; x.strokeStyle = '#c9d0d6'; x.beginPath(); x.arc(cx, cy, 11.9, 0, TAU); x.stroke();
+        x.lineWidth = 1.5; x.strokeStyle = '#dde2e6'; x.beginPath(); x.arc(cx, cy, 6.05, 0, TAU); x.stroke();
+        x.fillStyle = '#aab3bb';
+        [[-3, -3], [3, -3], [-3, 3], [3, 3]].forEach(function (p) { x.beginPath(); x.arc(cx + p[0], cy + p[1], 1.8, 0, TAU); x.fill(); });
+      });
+    });
+    [].slice.call(front.children).forEach(function (n) { n.remove(); });
+    front.appendChild(cv);
+  });
+  /* paper, writing side */
+  var back = $('.back'), bimg = $('.back img');
+  if (back && bimg) loaded(bimg, function () {
+    var cv = mk(653, 837, 'art');
+    job(cv, 653, 837, function (x) {
+      x.fillStyle = '#fff'; x.fillRect(0, 0, 653, 837);
+      x.drawImage(bimg, 1.5, 1.5, 650, 834);
+      x.strokeStyle = '#d9d4c4'; x.lineWidth = 1.5; x.strokeRect(.75, .75, 651.5, 835.5);
+    });
+    back.insertBefore(cv, back.firstChild); bimg.style.display = 'none';      // the <img> stays in the page only as the source of the zoom picture
+  });
+
+  /* page background: flat colour, spotlight + vignette, faint hearts (one canvas, so no tile seams) */
+  var base = solid('#dfe4e8'); base.id = 'bgbase'; base.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;display:block';
+  d.body.insertBefore(base, d.body.firstChild);
+  var dim = d.getElementById('dim'); if (dim) swap(dim, solid('#c9d1d8'));
+  var glow = $('#bgfx .glow');
+  if (glow) {
+    var gc = d.createElement('canvas'); gc.width = 360; gc.height = 640; var g = gc.getContext('2d'), w = 360, h = 640, r;
+    g.save(); g.translate(w * .5, h * .46); g.scale(w * .58, h * .52);
+    r = g.createRadialGradient(0, 0, 0, 0, 0, 1); r.addColorStop(0, 'rgba(255,255,255,.8)'); r.addColorStop(.72, 'rgba(255,255,255,0)');
+    g.fillStyle = r; g.fillRect(-3, -3, 6, 6); g.restore();
+    g.save(); g.translate(w / 2, h / 2); g.scale(w / 2 * Math.SQRT2, h / 2 * Math.SQRT2);
+    r = g.createRadialGradient(0, 0, 0, 0, 0, 1); r.addColorStop(.52, 'rgba(43,58,71,0)'); r.addColorStop(1, 'rgba(43,58,71,.2)');
+    g.fillStyle = r; g.fillRect(-2, -2, 4, 4); g.restore();
+    gc.setAttribute('aria-hidden', 'true'); swap(glow, gc);
+  }
+  var pat = $('#bgfx .pat');
+  if (pat) {
+    var L = Math.ceil(Math.max(screen.width, screen.height, innerWidth, innerHeight) / 72) * 72 + 72, ps = Math.min(dpr, 1.5);
+    var pc = d.createElement('canvas'); pc.width = pc.height = Math.round(L * ps); pc.style.width = pc.style.height = L + 'px';
+    var p = pc.getContext('2d'), hp = new Path2D('M36 45c-5-4-9-7-9-11a4.5 4.5 0 0 1 9-1 4.5 4.5 0 0 1 9 1c0 4-4 7-9 11z');
+    p.setTransform(ps, 0, 0, ps, 0, 0); p.strokeStyle = 'rgba(43,58,71,.09)'; p.lineWidth = 1.2; p.fillStyle = 'rgba(43,58,71,.1)';
+    for (var gx = 0; gx < L; gx += 72) for (var gy = 0; gy < L; gy += 72) {
+      p.save(); p.translate(gx, gy); p.stroke(hp); p.beginPath(); p.arc(0, 0, 1.4, 0, TAU); p.fill(); p.restore();
+    }
+    pc.setAttribute('aria-hidden', 'true'); swap(pat, pc);
+  }
+
+  var rt = 0;
+  function again() { clearTimeout(rt); rt = setTimeout(function () { var n = scaleFor(); if (n > R) { R = n; jobs.forEach(function (j) { j(); }); } }, 200); }
+  addEventListener('resize', again); addEventListener('orientationchange', again);
+})();
+</script>
 <script>
 (function () {
   'use strict';
@@ -468,6 +600,12 @@
     if (zc) return;
     zc = document.createElement('div'); zc.id = 'zc';
     var im = document.createElement('img'); im.alt = ''; im.draggable = false; im.src = document.querySelector('.back img').getAttribute('data-full'); zc.appendChild(im);
+    var fc = document.createElement('canvas'); fc.width = 653; fc.height = 837; var fx = fc.getContext('2d');
+    fx.strokeStyle = '#d9d4c4'; fx.lineWidth = 1.5; fx.strokeRect(.75, .75, 651.5, 835.5); zc.appendChild(fc);
+    var sc = document.createElement('canvas'); sc.className = 'zshine'; sc.width = sc.height = 200; var sx = sc.getContext('2d'), a = 105 * Math.PI / 180, L = 122;
+    var sg = sx.createLinearGradient(100 - Math.sin(a) * L, 100 + Math.cos(a) * L, 100 + Math.sin(a) * L, 100 - Math.cos(a) * L);
+    sg.addColorStop(.3, 'rgba(255,255,255,0)'); sg.addColorStop(.5, 'rgba(255,255,255,.5)'); sg.addColorStop(.7, 'rgba(255,255,255,0)');
+    sx.fillStyle = sg; sx.fillRect(0, 0, 200, 200); zc.appendChild(sc);
     sh = document.createElement('div'); sh.id = 'zsh'; document.body.appendChild(sh); document.body.appendChild(zc); if (im.decode) im.decode().catch(function () {});
   }
   function setT() { zc.style.transform = 'translate3d(' + px + 'px,' + py + 'px,0)'; }
@@ -525,6 +663,9 @@
     for (var i = 0; i < n; i++) {
       var d = document.createElement('i'), z = 40 + Math.random() * 60;
       d.style.cssText = 'left:' + (Math.random() * 100) + '%;width:' + z + 'px;height:' + z + 'px;--d:' + (18 + Math.random() * 18) + 's;--w:-' + (Math.random() * 30) + 's;--x:' + (Math.random() * 90 - 45) + 'px';
+      var bc = document.createElement('canvas'); bc.width = bc.height = 64; bc.style.cssText = 'display:block;width:100%;height:100%';
+      var bx = bc.getContext('2d'), bg = bx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      bg.addColorStop(0, 'rgba(255,226,160,.6)'); bg.addColorStop(.68, 'rgba(255,226,160,0)'); bx.fillStyle = bg; bx.fillRect(0, 0, 64, 64); d.appendChild(bc);
       box.appendChild(d);
     }
   })();
